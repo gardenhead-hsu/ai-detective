@@ -492,7 +492,7 @@ button:focus-visible{outline:4px solid #ffde70;outline-offset:2px}
 
     <div id="rActions">
       <button class="goldBtn" onclick="stopAudio();show('home')">⌂ 回到首頁</button>
-      <button class="blueBtn" onclick="showPrize()">🎁 領取獎勵</button>
+      <button id="rewardButton" class="blueBtn" onclick="showPrize()">🎁 領取獎勵</button>
     </div>
     <button class="adminBtn" onclick="showAdmin()">關主統計 / CSV</button>
   </section>
@@ -592,7 +592,7 @@ function closeModal(){document.getElementById('overlay').classList.add('hidden')
 function showMode(){
   stopAudio();
   modal(`<h2>🔎 選擇神探等級</h2>
-<p>三關共六題，完成即可領取神探獎勵！</p>
+<p>三關共六題，獲得 50 分以上即可領取小獎品！</p>
 <div class="mrow">
   <button class="mcard" onclick="startGame('simple')">🌟 小小神探
     <small>適合低、中年級與親子初學者</small></button>
@@ -605,7 +605,7 @@ function showHelp(){
   modal(`<h2>📖 玩法說明</h2>
 <p>① 選擇小小神探或高級神探<br>
 ② 換臉辨識、聲音神探、防詐判斷各作答兩題<br>
-③ 完成六題即可領獎！</p>
+③ 完成六題，達到 50 分即可領取小獎品！</p>
 <p><b>停一下・查一查・再分享！</b></p>
 <button class="mg" onclick="closeModal();showMode()">開始挑戰</button>`);
 }
@@ -754,11 +754,21 @@ function finish(){
   document.getElementById('rScore').innerHTML=`${score}<small> 分</small>`;
   document.getElementById('rRank').textContent=rankText();
   for(let s=0;s<3;s++)document.getElementById('rc'+s).textContent=hits[s]+'/2';
+  const rewardButton=document.getElementById('rewardButton');
+  if(score>=50){
+    rewardButton.textContent='🎁 領取獎勵';
+    rewardButton.onclick=showPrize;
+  }else{
+    rewardButton.textContent='↻ 再挑戰一次';
+    rewardButton.onclick=showMode;
+  }
   saveStats();
 }
 function showPrize(){
+  // 領獎權限只能由分數決定，避免未達門檻開啟兌獎視窗。
+  if(score<50){showMode();return;}
   modal(`<h2>🎁 恭喜完成挑戰！</h2>
-<p>你獲得「<b>${rankText()}</b>」稱號！<br>向關主出示這個畫面，即可領取獎勵。</p>
+<p>你獲得「<b>${rankText()}</b>」稱號！<br>請向關主出示這個畫面領取小獎品（每人限領一次）。</p>
 <p><b>停一下、查一查、再分享！</b></p>
 <hr style="border:1px dashed #b0c8e8;margin:16px 0">
 <p style="font-size:22px;font-weight:1000;color:#683090;margin:0 0 10px">📱 家長請掃描下方 QR Code 填寫活動心得</p>
