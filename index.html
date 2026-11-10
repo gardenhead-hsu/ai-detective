@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>AI 神探事務所｜載熙國小 80 週年</title>
+<style>
+/* ── reset ── */
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0a1230;
+  font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif}
+button{font:inherit;cursor:pointer;border:0;background:none;touch-action:manipulation}
+button:focus-visible{outline:4px solid #ffde70;outline-offset:2px}
+.hidden{display:none!important}
+
+/* ── Stage 1448×1086 縮放置中 ── */
+#stage{position:absolute;width:1448px;height:1086px;transform-origin:0 0;overflow:hidden}
+.screen{position:absolute;inset:0;display:none}
+.screen.active{display:block}
+
+/* ══════════════════════════════════════
+   HOME — 完整底圖，透明熱區
+   ══════════════════════════════════════ */
+#home{background:url('home.png') 0 0/100% 100% no-repeat}
+.hotspot{position:absolute;background:transparent;border-radius:50px}
+.hotspot:active{background:#ffffff18}
+
+/* ══════════════════════════════════════
+   共用背景（延續 home.png 氛圍）
+   右側暖琥珀書桌燈光 × 左側深藍冷調
+   ══════════════════════════════════════ */
+#quiz,#result{
+  background:
+    radial-gradient(ellipse 760px 580px at 82% 72%, #3d1e0855 0%, transparent 58%),
+    radial-gradient(ellipse 500px 420px at 8%  88%, #0e082a   0%, transparent 52%),
+    radial-gradient(ellipse 900px 700px at 50% 110%,#1a1050   0%, transparent 60%),
+    linear-gradient(162deg, #1e2f8e 0%, #111840 52%, #0a1030 100%);
+}
+
+/* 裝飾星星（延續首頁散落的金色星點） */
+.stars::before,.stars::after{
+  content:'✦ ✧ ✦ ✧ ✦';
+  position:absolute;top:18px;font-size:22px;
+  color:#ffd06088;letter-spacing:28px;pointer-events:none;
+}
+.stars::before{left:30px}
+.stars::after{right:30px;content:'✧ ✦ ✧ ✦ ✧'}
+
+/* ══════════════════════════════════════
+   QUIZ 佈局
+   ══════════════════════════════════════ */
+
+/* 頂部關卡徽章（粉紫藥丸，與首頁三關 icon 同調） */
+#qStage{
+  position:absolute;left:30px;top:50px;
+  height:98px;padding:0 36px;
+  display:inline-flex;align-items:center;
+  border-radius:49px;
+  background:linear-gradient(100deg,#e060be,#8838c8);
+  border:5px solid #ffe5ff;
+  box-shadow:0 7px #6a2a9a,0 0 22px #dd88ff33;
+  color:#fff;font-size:35px;font-weight:1000;text-shadow:1px 2px #68229a;
+  white-space:nowrap;
+}
+
+/* 進度籌碼（淺藍白，與首頁「玩法說明」按鈕同調） */
+#qProg{position:absolute;right:30px;top:56px;display:flex;gap:16px}
+.chip{
+  padding:12px 26px;border-radius:44px;
+  background:linear-gradient(#ffffff,#d0e8ff);
+  border:4px solid #fff;
+  box-shadow:0 0 0 3px #80b4f8,0 5px #6090d0;
+  color:#1a4080;font-size:25px;font-weight:950;
+  white-space:nowrap;
+}
+.chip em{color:#e08010;font-style:normal}
+
+/* 題目標題帶（奶黃暖調，呼應首頁暖色系） */
+#qTitle{
+  position:absolute;left:30px;top:170px;
+  width:974px;height:92px;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  border-radius:46px;
+  background:linear-gradient(#fff9d8,#ffe8a0);
+  border:4px solid #ffd060;
+  box-shadow:0 0 0 2px #c8a040 inset,0 6px 18px #0a123088;
+  color:#1a2878;font-size:30px;font-weight:1000;line-height:1.3;padding:0 24px;
+}
+
+/* 兩個選項框（白底藍框卡片，與首頁 icon 卡同調） */
+.pane{
+  position:absolute;top:282px;width:472px;height:584px;
+  border-radius:24px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(155deg,#f0f8ff,#ddeeff);
+  border:5px solid #fff;
+  box-shadow:0 0 0 4px #80b8f8,0 12px 28px #0a123088;
+  cursor:pointer;transition:box-shadow .15s,border-color .15s;
+}
+#paneA{left:30px} #paneB{left:526px}
+.pane img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.pane .miss{font-size:17px;color:#cc5030;text-align:center;padding:16px;line-height:1.6}
+
+/* 選中光環（金色，與首頁橘金主色呼應） */
+.pane.selected{
+  border-color:#ffc820;
+  box-shadow:0 0 0 7px #f9a800 inset,0 0 28px #ffd84488,0 12px 28px #0a123088;
+}
+
+/* 格角標籤 A / B */
+.pane::before{
+  content:attr(data-label);
+  position:absolute;left:12px;top:11px;z-index:2;
+  background:#ffffffcc;border:2px solid #d0e4f8;border-radius:12px;
+  font-size:20px;font-weight:1000;color:#204888;padding:3px 13px;
+  backdrop-filter:blur(4px);
+}
+
+/* 文字選項卡（居中大字） */
+.optCard{
+  width:calc(100% - 10px);height:calc(100% - 10px);
+  border-radius:18px;
+  background:linear-gradient(155deg,#fffef8,#dbeeff);
+  border:4px solid #fff;
+  padding:28px 22px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  gap:18px;color:#1e4580;text-align:center;
+}
+.optCard b{font-size:52px;color:#2a60c0}
+.optCard span{font-size:27px;font-weight:900;line-height:1.45}
+
+/* 音訊卡 */
+.audioCard{
+  width:calc(100% - 10px);height:calc(100% - 10px);
+  border-radius:18px;
+  background:linear-gradient(155deg,#f4fdff,#d0eeff);
+  border:4px solid #fff;
+  padding:22px 14px;color:#1e4580;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+}
+.audioCard .ahead{font-size:36px;font-weight:1000}
+.playBtn{
+  padding:13px 28px;border-radius:26px;
+  border:4px solid #fff;
+  background:linear-gradient(#e4f8ff,#88d4ff);
+  box-shadow:0 5px #5898cc;
+  color:#1555a8;font-size:24px;font-weight:1000;
+}
+.audioCard small{font-size:16px;color:#5a7090}
+
+/* 單段語音＋文字選項卡 */
+.audioChoiceCard{
+  width:calc(100% - 10px);height:calc(100% - 10px);
+  border-radius:18px;
+  background:linear-gradient(155deg,#f4fdff,#d0eeff);
+  border:4px solid #fff;
+  padding:22px 18px;color:#1e4580;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+}
+.audioChoiceCard .ahead{font-size:32px;font-weight:1000}
+.audioChoiceCard .clabel{
+  font-size:22px;font-weight:900;line-height:1.4;
+  background:#ddeeff;border-radius:12px;
+  padding:10px 18px;text-align:center;width:100%;
+}
+
+/* 神探提示面板（奶黃暖調，對應首頁書桌燈光） */
+#tipPanel{
+  position:absolute;left:1026px;top:170px;
+  width:392px;height:696px;
+  border-radius:26px;
+  background:linear-gradient(160deg,#fffce8,#fff0c0);
+  border:5px solid #fff8d0;
+  box-shadow:0 0 0 4px #c8a050,0 14px 32px #0a123088;
+  padding:24px 20px;
+}
+#tipPanel::before{
+  content:'📎';position:absolute;right:14px;top:-26px;
+  font-size:50px;transform:rotate(22deg);
+}
+#tipPanel h3{
+  font-size:28px;font-weight:1000;text-align:center;
+  margin:0 0 18px;padding-bottom:14px;
+  border-bottom:3px dashed #d0b060;color:#1a4a90;
+}
+#tipText{font-size:22px;font-weight:850;line-height:2.0;color:#1e3870}
+#tipText small{display:block;font-size:15px;color:#706040;line-height:1.6;margin-top:12px}
+
+/* 回饋面板（蓋住題目+兩格+，白底輕藍，呼應卡片風格） */
+#feedbackPanel{
+  position:absolute;left:30px;top:170px;
+  width:968px;height:700px;
+  border-radius:30px;
+  background:linear-gradient(155deg,#fffdf0,#e8f4ff);
+  border:7px solid #fff;
+  box-shadow:0 0 0 5px #90c0ff,0 20px 50px #0a1230aa;
+  padding:38px 48px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;color:#1a3c78;z-index:10;
+}
+#feedbackPanel .fbIcon{font-size:70px;margin-bottom:10px}
+#feedbackPanel h2{font-size:46px;margin:0 0 14px}
+#feedbackPanel .mini{font-size:20px;color:#5060a0;margin-top:16px}
+#fbText{
+  background:linear-gradient(135deg,#fffde8,#fff4b0);
+  border:4px solid #e8c840;border-left:8px solid #f0a000;
+  border-radius:18px;padding:16px 26px 16px 22px;
+  font-size:29px;font-weight:950;line-height:1.65;
+  color:#1a3060;margin:0;text-align:left;width:100%;
+}
+.fbReasonLabel{
+  font-size:19px;font-weight:1000;color:#a06010;
+  display:block;margin-bottom:8px;letter-spacing:1px;
+}
+
+/* 底部導覽按鈕 */
+#btnHome{
+  position:absolute;left:30px;bottom:28px;
+  width:280px;height:82px;border-radius:41px;
+  border:5px solid #fff;
+  background:linear-gradient(#ffffff,#d0e8ff);
+  box-shadow:0 6px #6090c8;
+  color:#1555a8;font-size:28px;font-weight:1000;
+}
+#btnSend{
+  position:absolute;left:344px;bottom:24px;
+  width:650px;height:90px;border-radius:45px;
+  border:6px solid #fff;
+  background:linear-gradient(#ffe87a,#ffb220 50%,#ea6810);
+  box-shadow:0 8px #a04c18,0 0 0 3px #ffd068;
+  color:#fff;font-size:38px;font-weight:1000;text-shadow:1px 3px #9a450c;
+}
+#btnSend:disabled{filter:grayscale(.5);opacity:.7;pointer-events:none}
+
+/* ══════════════════════════════════════
+   RESULT 佈局
+   ══════════════════════════════════════ */
+
+/* 頂部慶賀橫幅 */
+#rBanner{
+  position:absolute;left:0;top:0;width:100%;height:200px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(180deg,#1f3a9088 0%,transparent 100%);
+  pointer-events:none;
+}
+#rBanner h1{
+  margin:0;font-size:58px;font-weight:1000;color:#fff;
+  text-shadow:0 3px #0a1230,0 0 24px #80a8ff;letter-spacing:2px;
+}
+#rBanner p{
+  margin:0;font-size:28px;font-weight:700;color:#a8c8ff;
+  text-shadow:0 2px #0a1230;
+}
+
+/* 分數大卡（左側，橘金圓形呼應首頁開始挑戰按鈕） */
+#rScoreCard{
+  position:absolute;left:60px;top:210px;
+  width:560px;height:380px;
+  border-radius:34px;
+  background:linear-gradient(155deg,#fff9e8,#ffe8c0);
+  border:6px solid #fff;
+  box-shadow:0 0 0 4px #f0c060,0 16px 40px #0a123088;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+#rScoreCard .rl{
+  font-size:22px;font-weight:950;color:#fff;
+  background:#c03040;padding:4px 28px;border-radius:20px;
+}
+#rScore{
+  font-size:108px;font-weight:1000;line-height:1;
+  color:#c03020;text-shadow:0 4px #ffe090;
+}
+#rScore small{font-size:42px}
+#rRank{
+  font-size:34px;font-weight:1000;color:#fff;
+  background:linear-gradient(#d070f0,#8030c0);
+  border:4px solid #fff;border-radius:24px;
+  padding:10px 30px;
+  text-shadow:0 2px #5a1890;
+  box-shadow:0 0 0 2px #c060e8,0 4px 12px #0a123055;
+}
+
+/* 明細卡（右側三欄＋口號） */
+#rDetail{
+  position:absolute;left:660px;top:210px;
+  width:728px;height:380px;
+  border-radius:34px;
+  background:linear-gradient(155deg,#f0f6ff,#e0eeff);
+  border:6px solid #fff;
+  box-shadow:0 0 0 4px #90b8f0,0 16px 40px #0a123088;
+  padding:28px 30px;
+  display:flex;flex-direction:column;gap:18px;
+}
+#rDetail .dtitle{
+  font-size:26px;font-weight:1000;color:#1a3870;text-align:center;
+}
+.rCounts{display:flex;gap:16px}
+.rCount{
+  flex:1;border-radius:22px;padding:16px 10px;text-align:center;
+  border:4px solid #fff;font-size:19px;font-weight:900;color:#1e4080;
+}
+.rCount:nth-child(1){background:linear-gradient(#fce8f8,#f4ccee)}
+.rCount:nth-child(2){background:linear-gradient(#d8f0ff,#c0e4ff)}
+.rCount:nth-child(3){background:linear-gradient(#ddffd8,#c4f0c0)}
+.rCount .rNum{display:block;font-size:40px;font-weight:1000;margin-top:8px}
+#rReminder{
+  border-radius:22px;padding:16px 20px;text-align:center;
+  background:#fff4b0;border:3px solid #e8c840;
+  color:#683090;font-size:28px;font-weight:1000;
+}
+#rReminder small{display:block;font-size:17px;font-weight:700;
+  color:#3a4c78;margin-top:5px;line-height:1.5}
+
+/* QR Code 區塊 */
+#rQrSection{
+  position:absolute;left:60px;top:608px;
+  width:1328px;
+  border-radius:30px;
+  background:linear-gradient(155deg,#fffcf0,#edf6ff);
+  border:6px solid #fff;
+  box-shadow:0 0 0 4px #f0c060,0 16px 40px #0a123088;
+  padding:16px 36px;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.rqr-title{
+  font-size:26px;font-weight:1000;color:#683090;
+  background:#fff4b0;border:3px solid #e8c840;
+  border-radius:16px;padding:8px 28px;
+  text-align:center;width:100%;
+}
+.rqr-body{
+  display:flex;align-items:center;justify-content:center;gap:48px;
+  width:100%;
+}
+#rQrImg{
+  width:220px;height:220px;border-radius:16px;
+  border:5px solid #fff;
+  box-shadow:0 0 0 3px #c8a040,0 8px 20px #0a123055;
+  object-fit:contain;background:#fff;flex-shrink:0;
+}
+.rqr-hints{
+  display:flex;flex-direction:column;gap:12px;
+}
+.rqr-hint{
+  font-size:26px;font-weight:900;color:#1e3870;
+  background:#fff;border-radius:14px;
+  padding:12px 24px;
+  border:3px solid #d0e4f8;
+  box-shadow:0 4px #b0c8e8;
+  min-width:400px;
+}
+.rqr-hint b{color:#c03020;}
+
+/* 成果按鈕列 */
+#rActions{
+  position:absolute;left:60px;bottom:22px;
+  width:1328px;display:flex;gap:22px;
+}
+#rActions button{
+  flex:1;padding:18px;border-radius:40px;
+  font-size:34px;font-weight:1000;border:6px solid #fff;
+}
+.goldBtn{
+  background:linear-gradient(#ffe87a,#ffb220 50%,#ea6810);
+  box-shadow:0 8px #a04c18,0 0 0 3px #ffd068;
+  color:#fff;text-shadow:1px 3px #9a450c;
+}
+.blueBtn{
+  background:linear-gradient(#ffffff,#d0e8ff);
+  box-shadow:0 6px #6090c8;color:#1555a8;
+}
+
+/* ══════════════════════════════════════
+   OVERLAY / MODAL
+   ══════════════════════════════════════ */
+.overlay{position:absolute;inset:0;display:grid;place-items:center;
+  background:#0a1230cc;z-index:40}
+.modal{
+  width:860px;max-height:920px;overflow:auto;
+  border-radius:36px;padding:38px 44px;
+  background:linear-gradient(160deg,#fffef5,#dbeeff);
+  border:7px solid #fff;
+  box-shadow:0 0 0 6px #68c0ff,0 24px 60px #0a1230;
+  color:#1d4285;text-align:center;
+}
+.modal h2{font-size:44px;margin:0 0 18px}
+.modal p{font-size:27px;line-height:1.6;margin:8px 0}
+.mrow{display:flex;gap:20px;margin:22px 0}
+.mcard{
+  flex:1;padding:26px 20px;border-radius:28px;border:5px solid #fff;
+  background:#fff;color:#244a8f;font-weight:900;font-size:28px;
+  box-shadow:0 6px #9ac0e6;cursor:pointer;
+}
+.mcard:hover{background:#eaf4ff}
+.mcard small{display:block;font-size:18px;font-weight:700;color:#5a709a;margin-top:10px}
+.mnote{font-size:19px!important;color:#5a709a!important}
+.modal table{width:100%;border-collapse:collapse;font-size:22px;text-align:left}
+.modal td,.modal th{padding:10px;border-bottom:1px solid #b0c8e8}
+.mctr{display:flex;gap:16px;justify-content:center;margin:14px 0}
+.mctr b{font-size:26px;padding:14px 20px;background:#e4f0ff;border-radius:18px}
+/* 彈窗內按鈕 */
+.mg{display:inline-block;margin:8px;padding:14px 38px;border-radius:32px;
+  border:5px solid #fff;background:linear-gradient(#ffe87a,#ffb220 50%,#ea6810);
+  box-shadow:0 6px #a04c18;color:#fff;font-size:28px;font-weight:1000;
+  text-shadow:1px 2px #9a450c;cursor:pointer}
+.mb{display:inline-block;margin:8px;padding:12px 34px;border-radius:28px;
+  border:4px solid #fff;background:linear-gradient(#fff,#d0e8ff);
+  box-shadow:0 5px #6090c8;color:#1555a8;font-size:24px;font-weight:1000;cursor:pointer}
+.ms{display:inline-block;margin:6px;padding:10px 26px;border-radius:24px;
+  border:4px solid #fff;background:linear-gradient(#fff,#d0e8ff);
+  box-shadow:0 4px #6090c8;color:#1555a8;font-size:19px;font-weight:900;cursor:pointer}
+.adminBtn{position:absolute;left:16px;bottom:10px;background:#0a1a60dc;color:#fff;
+  padding:7px 12px;border-radius:14px;font-size:14px;border:1px solid #ffffff60;z-index:5}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ══ HOME ══ -->
+  <section id="home" class="screen active">
+    <button class="hotspot" style="left:795px;top:779px;width:440px;height:117px"
+      onclick="showMode()" aria-label="開始挑戰"></button>
+    <button class="hotspot" style="left:867px;top:905px;width:278px;height:97px"
+      onclick="showHelp()" aria-label="玩法說明"></button>
+    <button class="adminBtn" onclick="showAdmin()">關主統計 / 匯出 CSV</button>
+  </section>
+
+  <!-- ══ QUIZ ══ -->
+  <section id="quiz" class="screen stars">
+    <div id="qStage"></div>
+    <div id="qProg">
+      <div class="chip" id="qP1"></div>
+      <div class="chip" id="qP2"></div>
+    </div>
+    <div id="qTitle"></div>
+
+    <div id="paneA" class="pane" data-label="A"
+      onclick="choose('A')" role="button" tabindex="0" aria-label="選擇 A"></div>
+    <div id="paneB" class="pane" data-label="B"
+      onclick="choose('B')" role="button" tabindex="0" aria-label="選擇 B"></div>
+
+    <div id="tipPanel"><h3>💡 神探提示</h3><div id="tipText"></div></div>
+
+    <div id="feedbackPanel" class="hidden">
+      <div class="fbIcon" id="fbIcon"></div>
+      <h2 id="fbTitle"></h2>
+      <div id="fbText"></div>
+      <p class="mini">點下方橘色按鈕繼續 👇</p>
+    </div>
+
+    <button id="btnHome" onclick="confirmHome()">⌂ 返回首頁</button>
+    <button id="btnSend" onclick="mainAction()" disabled>送出答案</button>
+    <button class="adminBtn" onclick="showAdmin()">關主統計</button>
+  </section>
+
+  <!-- ══ RESULT ══ -->
+  <section id="result" class="screen stars">
+    <div id="rBanner">
+      <h1>🎖️ 恭喜完成挑戰！</h1>
+      <p>AI 神探事務所 × 載熙國小 80 週年校慶</p>
+    </div>
+
+    <div id="rScoreCard">
+      <span class="rl">總得分</span>
+      <div id="rScore">0<small> 分</small></div>
+      <div id="rRank">神探新秀</div>
+    </div>
+
+    <div id="rDetail">
+      <div class="dtitle">各關卡表現</div>
+      <div class="rCounts">
+        <div class="rCount">🔎 換臉辨識<span class="rNum" id="rc0">0/2</span></div>
+        <div class="rCount">🎙️ 聲音辨識<span class="rNum" id="rc1">0/2</span></div>
+        <div class="rCount">🛡️ 防詐判斷<span class="rNum" id="rc2">0/2</span></div>
+      </div>
+      <div id="rReminder">停一下、查一查、再分享！
+        <small>看到可疑影像或聲音，不要急著相信或轉傳。</small>
+      </div>
+    </div>
+
+    <div id="rQrSection">
+      <div class="rqr-title">📱 歡迎家長掃描 QR Code，填寫本次活動心得！</div>
+      <div class="rqr-body">
+        <img id="rQrImg" src="survey_qr.png" alt="問卷 QR Code">
+        <div class="rqr-hints">
+          <div class="rqr-hint">📅 活動日期：<b>2026 / 11 / 13</b></div>
+          <div class="rqr-hint">🏫 活動名稱：<b>載熙國小校慶</b></div>
+          <div class="rqr-hint">📍 活動地點：<b>載熙國小</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rActions">
+      <button class="goldBtn" onclick="showMode()">↻ 再玩一次</button>
+      <button class="blueBtn" onclick="showPrize()">🎁 領取獎勵</button>
+    </div>
+    <button class="adminBtn" onclick="showAdmin()">關主統計 / CSV</button>
+  </section>
+
+  <div id="overlay" class="overlay hidden"><div id="modal" class="modal"></div></div>
+</div>
+
+<script>
+'use strict';
+
+/* ══ 題庫 ══ */
+const data = {
+  simple:[
+    {id:'I1',stage:0,title:'哪一張可能是 AI 換臉影像？',
+     kind:'imagepair',left:'pair1_real.jpg',right:'pair1_fake.jpg',answer:'B',
+     why:'B 是 AI 換臉影像。AI 換臉越來越逼真，光靠眼睛很難判斷——查證影像的原始來源，才是最可靠的方法！'},
+    {id:'I2',stage:0,title:'兩張照片中，哪一張是被 AI 修改過的？',
+     kind:'imagepair',left:'pair2_fake.jpg',right:'pair2_real.jpg',answer:'A',
+     why:'A 是 AI 換臉影像。即使看起來非常自然，照片仍可能是 AI 合成的——眼見不一定為真！'},
+    {id:'I3',stage:0,title:'找出哪一張是 AI 合成的換臉照片？',
+     kind:'imagepair',left:'pair3_real.jpg',right:'pair3_fake.jpg',answer:'B',
+     why:'B 是 AI 換臉影像。影像越逼真越危險！遇到可疑照片，不要急著相信，要追查原始發布來源。'},
+    {id:'S1',stage:2,title:'朋友傳來同學被換臉的搞笑照片，怎麼做比較好？',
+     kind:'choicecards',leftText:'不轉傳，必要時告訴可信任的大人',rightText:'轉發給大家',answer:'A',
+     why:'未經同意分享換臉照片，可能讓傷害擴散給更多人。正確做法是不轉傳，並告訴家長或老師！'},
+    {id:'S2',stage:2,title:'影片說點連結就能免費領遊戲點數，你會？',
+     kind:'choicecards',leftText:'馬上點開',rightText:'先查證，不亂點',answer:'B',
+     why:'免費點數、神秘連結是詐騙常用手法！不明連結可能藏有病毒或竊取個資，遇到這類訊息一定要先查證。'},
+    {id:'S3',stage:2,title:'有人未經同意用你的照片製作換臉影片，你會？',
+     kind:'choicecards',leftText:'向可信任的大人求助',rightText:'默默忍耐',answer:'A',
+     why:'遇到有人未經同意用你的照片做壞事，要勇敢告訴家長或老師求助——這不是你的錯！'}
+  ],
+  advanced:[
+    {id:'I4',stage:0,title:'這兩張照片，哪一張可能是 AI 換臉合成？',
+     kind:'imagepair',left:'pair4_real.jpg',right:'pair4_fake.jpg',answer:'B',
+     why:'B 是 AI 合成影像。高品質的換臉，連專家都難以用肉眼分辨——查證影像的原始來源才是關鍵！'},
+    {id:'I5',stage:0,title:'仔細觀察，哪一張是 AI 修改過的影像？',
+     kind:'imagepair',left:'pair5_fake.jpg',right:'pair5_real.jpg',answer:'A',
+     why:'A 是 AI 換臉影像。AI 技術持續進步，肉眼辨識越來越不可靠——養成查來源的習慣才能保護自己。'},
+    {id:'I6',stage:0,title:'兩張都很逼真，你認為哪一張是 AI 合成的？',
+     kind:'imagepair',left:'pair6_real.jpg',right:'pair6_fake.jpg',answer:'B',
+     why:'B 是 AI 合成影像。就算你看不出來，不代表判斷力差——AI 本來就是設計來讓人無法辨識的！'},
+    {id:'S4',stage:2,title:'網路流傳疑似老師說不當言論的影片，應該？',
+     kind:'choicecards',leftText:'立刻轉傳評論',rightText:'先停止散播並查證來源',answer:'B',
+     why:'影片可能被剪輯、拼接或用 AI 變造。還沒查證就分享，你可能正在幫忙傳播假訊息！'},
+    {id:'S5',stage:2,title:'同學想拿朋友照片做 AI 換臉，哪個做法較正確？',
+     kind:'choicecards',leftText:'先取得同意並確認用途',rightText:'朋友間不用問',answer:'A',
+     why:'就算是朋友，使用他人照片前也要先取得同意。未經同意使用別人的臉，可能違法，也會傷害感情。'},
+    {id:'S6',stage:2,title:'看到可疑深偽內容時，最重要的是？',
+     kind:'choicecards',leftText:'先分享再說',rightText:'停一下、查一查、再分享',answer:'B',
+     why:'「停一下、查一查、再分享」！這三個步驟能保護你和家人不被假訊息傷害，是防範 AI 詐騙最重要的觀念。'}
+  ]
+};
+
+
+/* 第二關共用題庫：不分難度，每回合從四組語音中抽兩組 */
+const voicePool = [
+  {id:'V1',stage:1,title:'兩段聲音，哪一段是 AI 合成的？',
+   kind:'audiopair',left:'voice1_real.mp3',right:'voice1_fake.mp3',answer:'B',
+   why:'B 是 AI 合成語音。聲音再自然也可能是假的——不能只靠耳朵確認對方是誰！收到可疑語音訊息，要用其他方式查證。'},
+  {id:'V2',stage:1,title:'兩段聲音，哪一段是 AI 合成的？',
+   kind:'audiopair',left:'voice2_fake.mp3',right:'voice2_real.mp3',answer:'A',
+   why:'A 是 AI 合成語音。詐騙集團可能用 AI 偽裝成家人的聲音！收到「急需匯款」等要求，一定要另外打電話直接確認。'},
+  {id:'V3',stage:1,title:'兩段聲音，哪一段是 AI 合成的？',
+   kind:'audiopair',left:'voice3_real.mp3',right:'voice3_fake.mp3',answer:'B',
+   why:'B 是 AI 合成語音。AI 能產生極度逼真的聲音，收到重要語音訊息時，一定要透過其他管道再次確認身分。'},
+  {id:'V4',stage:1,title:'兩段聲音，哪一段是 AI 合成的？',
+   kind:'audiopair',left:'voice4_fake.mp3',right:'voice4_real.mp3',answer:'A',
+   why:'A 是 AI 合成語音。聲音流不流暢，不代表是真人說的——有疑問時要透過多個管道查證，不要輕信！'}
+];
+
+const stageNames=['換臉神探','聲音神探','防詐神探'];
+let deck=[],idx=0,selected=null,score=0,hits=[0,0,0],
+    mode='simple',answered=false,audioObj=null;
+
+/* ── 縮放置中 ── */
+function fit(){
+  const s=Math.min(window.innerWidth/1448,window.innerHeight/1086);
+  const x=(window.innerWidth-1448*s)/2, y=(window.innerHeight-1086*s)/2;
+  document.getElementById('stage').style.transform=`translate(${x}px,${y}px) scale(${s})`;
+}
+window.addEventListener('resize',fit); fit();
+
+/* ── 切換畫面 ── */
+function show(id){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('active',el.id===id));
+}
+
+/* ── Modal ── */
+function modal(html){
+  document.getElementById('modal').innerHTML=html;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+function closeModal(){document.getElementById('overlay').classList.add('hidden');}
+
+/* ── 首頁 ── */
+function showMode(){
+  stopAudio();
+  modal(`<h2>🔎 選擇神探等級</h2>
+<p>三關共六題，完成即可領取神探獎勵！</p>
+<div class="mrow">
+  <button class="mcard" onclick="startGame('simple')">🌟 小小神探
+    <small>適合低、中年級與親子初學者</small></button>
+  <button class="mcard" onclick="startGame('advanced')">🏆 高級神探
+    <small>適合高年級與家長</small></button>
+</div>
+<button class="mb" onclick="closeModal()">取消</button>
+<p class="mnote">全程離線，不使用攝影機與麥克風</p>`);
+}
+function showHelp(){
+  modal(`<h2>📖 玩法說明</h2>
+<p>① 選擇小小神探或高級神探<br>
+② 換臉辨識、聲音神探、防詐判斷各作答兩題<br>
+③ 完成六題即可領獎！</p>
+<p><b>停一下・查一查・再分享！</b></p>
+<button class="mg" onclick="closeModal();showMode()">開始挑戰</button>`);
+}
+
+/* ── 遊戲邏輯 ── */
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];
+  }return a;
+}
+function startGame(m){
+  closeModal(); mode=m; deck=[];
+  for(let s=0;s<3;s++){
+    if(s===1) deck.push(...shuffle([...voicePool]).slice(0,2));
+    else deck.push(...shuffle(data[m].filter(q=>q.stage===s)).slice(0,2));
+  }
+  idx=0; score=0; hits=[0,0,0]; selected=null; answered=false;
+  show('quiz'); renderQuestion();
+}
+
+function stopAudio(){if(audioObj){audioObj.pause();audioObj=null;}}
+function playAudio(src){
+  stopAudio();
+  audioObj=new Audio('assets/'+src);
+  audioObj.play().catch(()=>alert('無法播放 '+src+'，請確認 assets/ 內有此檔案。'));
+}
+
+function renderQuestion(){
+  stopAudio(); answered=false; selected=null;
+  document.getElementById('feedbackPanel').classList.add('hidden');
+  document.getElementById('btnSend').disabled=true;
+  document.getElementById('btnSend').textContent='送出答案';
+
+  const q=deck[idx];
+  document.getElementById('qStage').textContent=
+    ['第一關：','第二關：','第三關：'][q.stage]+stageNames[q.stage];
+  document.getElementById('qP1').innerHTML=`第 <em>${q.stage+1}</em> 關 / 共 3 關`;
+  document.getElementById('qP2').innerHTML=`第 <em>${idx%2+1}</em> 題 / 共 2 題`;
+  document.getElementById('qTitle').textContent=q.title;
+  document.getElementById('paneA').classList.remove('selected');
+  document.getElementById('paneB').classList.remove('selected');
+  renderPane('A',q); renderPane('B',q);
+
+  document.getElementById('tipText').innerHTML=[
+    '🔎 仔細觀察臉部細節<br>🖼️ 注意邊緣與來源<br>📣 別急著下結論<small>AI 換臉不一定看得出來，查證比猜測重要。</small>',
+    '🎧 注意音色與語氣<br>🔊 聲音也能被合成<br>📣 先查證再相信<small>逼真的聲音，不代表說話者是真人。</small>',
+    '🛡️ 不亂點、不亂傳<br>💙 尊重隱私與同意<br>🔎 遇事先求證<small>真正重點是學會保護自己和他人。</small>'
+  ][q.stage];
+}
+
+function renderPane(side,q){
+  const pane=document.getElementById('pane'+side);
+  pane.innerHTML='';
+  pane.onclick=()=>choose(side);
+  pane.style.cursor='pointer';
+
+  if(q.kind==='imagepair'){
+    const img=document.createElement('img');
+    img.src='assets/'+(side==='A'?q.left:q.right);
+    img.alt='題目圖片 '+side;
+    img.onerror=()=>{img.remove();
+      const d=document.createElement('div');d.className='miss';
+      d.innerHTML='<b style="font-size:40px">🖼️</b><br>缺少圖片檔案<br><small>assets/'+(side==='A'?q.left:q.right)+'</small>';
+      pane.appendChild(d);};
+    pane.appendChild(img);
+
+  }else if(q.kind==='choicecards'){
+    const c=document.createElement('div');c.className='optCard';
+    c.innerHTML=`<b>${side}</b><span>${side==='A'?q.leftText:q.rightText}</span>`;
+    pane.appendChild(c);
+
+  }else if(q.kind==='audiopair'){
+    const src=side==='A'?q.left:q.right;
+    const c=document.createElement('div');c.className='audioCard';
+    c.innerHTML=`<div class="ahead">🎙️ 聲音 ${side}</div>
+      <button class="playBtn">▶ 播放</button>`;
+    c.querySelector('button').onclick=e=>{e.stopPropagation();playAudio(src);};
+    pane.appendChild(c);
+
+  }else if(q.kind==='audiosingle_choice'){
+    const c=document.createElement('div');
+    if(side==='A'){
+      c.className='audioChoiceCard';
+      c.innerHTML=`<div class="ahead">🎙️ 語音訊息</div>
+        <button class="playBtn">▶ 播放</button>
+        <div class="clabel">${q.leftText}</div>`;
+      c.querySelector('button').onclick=e=>{e.stopPropagation();playAudio(q.audio);};
+    }else{
+      c.className='optCard';
+      c.innerHTML=`<b>B</b><span>${q.rightText}</span>`;
+    }
+    pane.appendChild(c);
+
+  }else if(q.kind==='audiopair_choice'){
+    if(side==='A'){
+      const c=document.createElement('div');c.className='audioCard';
+      c.innerHTML=`<div class="ahead">🎙️ 音檔比較</div>
+        <button class="playBtn">▶ 播放 A 段</button>
+        <button class="playBtn" style="margin-top:10px">▶ 播放 B 段</button>`;
+      const btns=c.querySelectorAll('button');
+      btns[0].onclick=e=>{e.stopPropagation();playAudio(q.left);};
+      btns[1].onclick=e=>{e.stopPropagation();playAudio(q.right);};
+      pane.appendChild(c);
+      pane.onclick=null; pane.style.cursor='default';
+    }else{
+      const c=document.createElement('div');c.className='optCard';
+      c.innerHTML=`<b>答案</b><span>${q.rightText}</span>`;
+      pane.appendChild(c);
+    }
+  }
+}
+
+function choose(s){
+  if(answered)return;
+  selected=s;
+  document.getElementById('paneA').classList.toggle('selected',s==='A');
+  document.getElementById('paneB').classList.toggle('selected',s==='B');
+  document.getElementById('btnSend').disabled=false;
+}
+
+function mainAction(){
+  if(answered){
+    if(idx===deck.length-1)finish();
+    else{idx++;renderQuestion();}
+    return;
+  }
+  if(!selected)return;
+  const q=deck[idx]; answered=true;
+  const ok=selected===q.answer;
+  if(ok){score+=q.stage===2?20:15; hits[q.stage]++;}
+  stopAudio();
+  document.getElementById('fbIcon').textContent=ok?'🎉':'💡';
+  document.getElementById('fbTitle').textContent=ok?'答對了！':'這題有個重要觀念！';
+  document.getElementById('fbText').innerHTML='<span class="fbReasonLabel">💡 關鍵知識</span>'+q.why;
+  document.getElementById('feedbackPanel').classList.remove('hidden');
+  document.getElementById('btnSend').textContent=
+    idx===deck.length-1?'完成挑戰 🏁':'下一題 →';
+  document.getElementById('btnSend').disabled=false;
+}
+
+function rankText(){
+  return score>=90?'傳奇神探':score>=70?'高級神探':score>=40?'見習神探':'神探新秀';
+}
+function finish(){
+  stopAudio(); show('result');
+  document.getElementById('rScore').innerHTML=`${score}<small> 分</small>`;
+  document.getElementById('rRank').textContent=rankText();
+  for(let s=0;s<3;s++)document.getElementById('rc'+s).textContent=hits[s]+'/2';
+  saveStats();
+}
+function showPrize(){
+  modal(`<h2>🎁 恭喜完成挑戰！</h2>
+<p>你獲得「<b>${rankText()}</b>」稱號！<br>向關主出示這個畫面，即可領取獎勵。</p>
+<p><b>停一下、查一查、再分享！</b></p>
+<hr style="border:1px dashed #b0c8e8;margin:16px 0">
+<p style="font-size:22px;font-weight:1000;color:#683090;margin:0 0 10px">📱 家長請掃描下方 QR Code 填寫活動心得</p>
+<img src="survey_qr.png"
+  style="width:260px;height:260px;border-radius:16px;border:4px solid #fff;
+  box-shadow:0 0 0 3px #c8a040,0 6px 18px #0a123055;object-fit:contain;
+  background:#fff;display:block;margin:0 auto 14px">
+<div style="display:inline-block;text-align:left;font-size:20px;font-weight:900;
+  color:#1e3870;line-height:2.0;background:#f0f8ff;border-radius:14px;
+  padding:12px 28px;margin-bottom:10px">
+  📅 活動日期：<b style="color:#c03020">2026 / 11 / 13</b><br>
+  🏫 活動名稱：<b style="color:#c03020">載熙國小校慶</b><br>
+  📍 活動地點：<b style="color:#c03020">載熙國小</b>
+</div><br>
+<button class="mg" onclick="closeModal()">我知道了</button>`);
+}
+function confirmHome(){
+  modal(`<h2>要返回首頁嗎？</h2>
+<p>這一回合的答題進度將不會保留。</p>
+<button class="mg" onclick="closeModal();stopAudio();show('home')">返回首頁</button>
+<button class="mb" onclick="closeModal()">繼續闖關</button>`);
+}
+
+/* ── 匿名統計 ── */
+const KEY='ai_detective_v6';
+function getStats(){try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch{return [];}}
+function saveStats(){
+  const a=getStats();
+  a.push({time:new Date().toISOString(),mode,score,face:hits[0],voice:hits[1],safe:hits[2]});
+  try{localStorage.setItem(KEY,JSON.stringify(a));}catch{alert('統計儲存失敗，遊戲不受影響。');}
+}
+function showAdmin(){
+  const d=getStats(),avg=d.length?Math.round(d.reduce((a,b)=>a+b.score,0)/d.length):0;
+  const s=[d.reduce((a,b)=>a+b.face,0),d.reduce((a,b)=>a+b.voice,0),d.reduce((a,b)=>a+b.safe,0)];
+  modal(`<h2>📊 關主統計</h2>
+<div class="mctr">
+  <b>${d.length} 組<br><small>完成回合</small></b>
+  <b>${avg} 分<br><small>平均分數</small></b>
+</div>
+<table><tr><th>關卡</th><th>答對數</th><th>正確率</th></tr>
+${stageNames.map((t,i)=>`<tr><td>${t}</td><td>${s[i]}/${d.length*2}</td>
+  <td>${d.length?Math.round(s[i]/(d.length*2)*100):0}%</td></tr>`).join('')}
+</table>
+<p class="mnote">只統計本機完成的回合，不儲存姓名、照片與聲紋。</p>
+<button class="mg" onclick="exportCsv()">匯出 CSV</button>
+<button class="mb" onclick="closeModal()">關閉</button>
+<button class="ms" onclick="clearStats()">清除本機統計</button>`);
+}
+function exportCsv(){
+  const d=getStats();
+  const csv=[['時間','難度','總分','換臉','聲音','防詐'],
+    ...d.map(r=>[r.time,r.mode,r.score,r.face,r.voice,r.safe])]
+    .map(r=>r.join(',')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='AI神探事務所_匿名成果統計.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function clearStats(){
+  if(confirm('確定清除這台裝置上的所有匿名闖關紀錄？清除後無法復原。')){
+    localStorage.removeItem(KEY); showAdmin();
+  }
+}
+</script>
+</body>
+</html>
